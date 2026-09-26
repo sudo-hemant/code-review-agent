@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A function with a list as its default argument, shared across all calls."
+
+problems:
+  - file: tags.py
+    line: 5
+    category: [correctness]
+    note: "The default list is created once and shared by every call."

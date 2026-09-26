@@ -1,0 +1,6 @@
+# What is deliberately wrong with this change.
+
+description: "A pure refactor: repeated logic pulled out into a helper, behaviour unchanged."
+
+# Nothing is wrong here. Any finding at all counts against the reviewer.
+problems: []

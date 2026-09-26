@@ -19,8 +19,21 @@ class Problem:
 
     file: str
     line: int
-    category: str
+    category: str | list[str]
     note: str = ""
+
+    @property
+    def categories(self) -> list[str]:
+        """Every category we would accept for this problem.
+
+        Some problems honestly sit between two categories. A swallowed
+        exception is arguably correctness and arguably maintainability, and
+        marking the reviewer wrong for picking the other one would make the
+        scoreboard lie. So a case may list several.
+        """
+        if isinstance(self.category, str):
+            return [self.category]
+        return list(self.category)
 
 
 @dataclass

@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A log reader that pulls an entire file into memory before looking at it."
+
+problems:
+  - file: logs.py
+    line: 10
+    category: [performance, correctness, maintainability]
+    note: "Reads the whole log into memory, and the file handle is never closed."

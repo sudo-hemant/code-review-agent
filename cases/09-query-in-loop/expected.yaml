@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A total built by asking the database once per user."
+
+problems:
+  - file: billing.py
+    line: 10
+    category: [performance]
+    note: "One database round trip per user where a single grouped query would do."

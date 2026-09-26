@@ -1,10 +1,9 @@
 """Step two of the review: ask the model what is wrong with the change."""
 
-from google.genai.errors import ServerError
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .findings import Review, Verdict
-from .llm import ModelBusy, get_model, with_retries
+from .llm import ask, get_model
 from .prompt import SYSTEM, USER, build_files_section
 
 
@@ -15,21 +14,15 @@ def review_changes(diff: str, files: dict[str, str]) -> Review:
     comes back with a file, a line, a category, a seriousness level and a
     confidence. It cannot reply with loose prose even if it wants to.
     """
-    model = with_retries(get_model().with_structured_output(Review))
+    model = get_model().with_structured_output(Review)
 
-    try:
-        result = model.invoke(
-            [
-                SystemMessage(SYSTEM),
-                HumanMessage(USER.format(diff=diff, files=build_files_section(files))),
-            ]
-        )
-    except ServerError as error:
-        raise ModelBusy(
-            "The model is busy and did not free up after several tries. "
-            "Wait a minute and run it again, or set REVIEW_MODEL in your .env "
-            "to a quieter model such as google_genai:gemini-3.5-flash."
-        ) from error
+    result = ask(
+        model,
+        [
+            SystemMessage(SYSTEM),
+            HumanMessage(USER.format(diff=diff, files=build_files_section(files))),
+        ],
+    )
 
     # Belt and braces: if the model returns nothing usable, say so plainly
     # rather than pretending the change was fine.

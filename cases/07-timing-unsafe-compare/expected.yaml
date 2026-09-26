@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "An API token checked with a plain equals, which leaks timing information."
+
+problems:
+  - file: auth.py
+    line: 8
+    category: [security]
+    note: "Comparing secrets with == returns early on the first wrong byte."

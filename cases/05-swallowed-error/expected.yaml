@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A catch-all that hides every failure, including ones that matter."
+
+problems:
+  - file: sync.py
+    line: 15
+    category: [correctness, maintainability]
+    note: "Every failure is discarded silently, so a broken sync looks successful."

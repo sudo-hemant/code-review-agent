@@ -1,0 +1,6 @@
+# What is deliberately wrong with this change.
+
+description: "A small, correct, well-named function added with types and a docstring."
+
+# Nothing is wrong here. Any finding at all counts against the reviewer.
+problems: []

@@ -14,7 +14,7 @@ from rich.console import Console
 from . import report
 from .changes import NotAGitRepository
 from .graph import build_graph
-from .llm import MissingApiKey, ModelBusy
+from .llm import MissingApiKey, ModelUnavailable
 
 app = typer.Typer(add_completion=False, help="Review your code changes.")
 console = Console()
@@ -43,7 +43,7 @@ def main(
     except NotAGitRepository:
         console.print(f"{repo} is not a git repository.", style="red")
         raise typer.Exit(code=1)
-    except (MissingApiKey, ModelBusy) as error:
+    except (MissingApiKey, ModelUnavailable) as error:
         console.print(str(error), style="red")
         raise typer.Exit(code=1)
     except RuntimeError as error:

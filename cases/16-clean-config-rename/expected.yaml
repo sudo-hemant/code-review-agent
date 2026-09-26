@@ -1,0 +1,6 @@
+# What is deliberately wrong with this change.
+
+description: "Renaming a setting consistently across a file, nothing else changed."
+
+# Nothing is wrong here. Any finding at all counts against the reviewer.
+problems: []

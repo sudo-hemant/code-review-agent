@@ -1,0 +1,6 @@
+# What is deliberately wrong with this change.
+
+description: "A genuine bug fix, done correctly, with a test added for it."
+
+# Nothing is wrong here. Any finding at all counts against the reviewer.
+problems: []

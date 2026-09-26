@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A new discount rule added to a module that has tests, with no test added for it."
+
+problems:
+  - file: pricing.py
+    line: 5
+    category: [testing]
+    note: "New branching logic in a module that already has a test file, untested."

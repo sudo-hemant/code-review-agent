@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "An average that blows up when handed an empty list."
+
+problems:
+  - file: stats.py
+    line: 7
+    category: [correctness]
+    note: "Dividing by len() crashes on an empty list, unlike highest() above it."

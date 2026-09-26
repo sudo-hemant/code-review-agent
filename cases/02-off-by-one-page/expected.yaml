@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A pagination helper whose slice drops the last item on every page."
+
+problems:
+  - file: pagination.py
+    line: 9
+    category: [correctness]
+    note: "The slice is one short, so every page silently loses its last item."

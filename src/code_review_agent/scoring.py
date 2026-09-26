@@ -24,7 +24,7 @@ def matches(finding: Finding, problem: Problem) -> bool:
     """Is this finding talking about this problem?"""
     if finding.file != problem.file:
         return False
-    if finding.category.value != problem.category:
+    if finding.category.value not in problem.categories:
         return False
     if finding.line is None:
         # No line given. Same file and same kind of problem is enough.

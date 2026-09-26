@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A download route that joins a user-supplied filename straight onto a directory."
+
+problems:
+  - file: files.py
+    line: 12
+    category: [security]
+    note: "A filename of ../../etc/passwd escapes the upload directory entirely."

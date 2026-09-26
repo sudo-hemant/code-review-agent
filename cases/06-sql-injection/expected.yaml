@@ -1,0 +1,9 @@
+# What is deliberately wrong with this change.
+
+description: "A search query built by pasting user input into SQL."
+
+problems:
+  - file: users.py
+    line: 7
+    category: [security]
+    note: "User input is pasted into SQL, unlike get_by_id above which binds it."

@@ -13,7 +13,7 @@ from rich.console import Console
 
 from . import scoreboard
 from .cases import load_cases
-from .llm import MissingApiKey, ModelBusy
+from .llm import MissingApiKey, ModelUnavailable
 from .reviewer import review_changes
 from .scoring import Score, score_case
 
@@ -33,13 +33,29 @@ def main(
         raise typer.Exit(code=1)
 
     scores: list[Score] = []
-    try:
-        for number, case in enumerate(cases, start=1):
+    stopped_early: str | None = None
+
+    for number, case in enumerate(cases, start=1):
+        try:
             with console.status(f"[{number}/{len(cases)}] {case.name}"):
                 review = review_changes(case.diff, case.files)
-            scores.append(score_case(case.name, case.problems, review.findings))
-    except (MissingApiKey, ModelBusy) as error:
-        console.print(str(error), style="red")
+        except (MissingApiKey, ModelUnavailable) as error:
+            # Running out of free quota part way through should not throw away
+            # the cases that did run. Report what we have and say so.
+            stopped_early = str(error)
+            break
+        scores.append(score_case(case.name, case.problems, review.findings))
+
+    if not scores:
+        console.print(stopped_early or "No cases could be run.", style="red")
         raise typer.Exit(code=1)
 
     scoreboard.render(scores, console)
+
+    if stopped_early:
+        console.print(
+            f"Stopped after {len(scores)} of {len(cases)} cases. {stopped_early}",
+            style="yellow",
+        )
+        console.print()
+        raise typer.Exit(code=1)

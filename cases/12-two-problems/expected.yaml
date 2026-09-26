@@ -1,0 +1,13 @@
+# What is deliberately wrong with this change.
+
+description: "A session helper with both a weak random token and a mutable shared cache."
+
+problems:
+  - file: sessions.py
+    line: 13
+    category: [security]
+    note: "random is predictable; secrets is already imported in this file."
+  - file: sessions.py
+    line: 16
+    category: [correctness]
+    note: "The default dict is shared, so sessions leak details into each other."
