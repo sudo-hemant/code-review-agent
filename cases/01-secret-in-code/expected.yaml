@@ -1,0 +1,10 @@
+# What is deliberately wrong with this change.
+# The scoring command compares what the reviewer said against this list.
+
+description: A live secret key added as a fallback when the environment variable is missing.
+
+problems:
+  - file: config.py
+    line: 3
+    category: security
+    note: Hardcoded live API key committed to the repository.

@@ -10,12 +10,14 @@ dependencies = [
     "langgraph>=1.2.12",
     "pydantic>=2.13.5",
     "python-dotenv>=1.2.3",
+    "pyyaml>=6.0.3",
     "rich>=15.0.0",
     "typer>=0.27.2",
 ]
 
 [project.scripts]
 review = "code_review_agent:main"
+review-score = "code_review_agent:score"
 
 [build-system]
 requires = ["uv_build>=0.12.17,<0.13.0"]
