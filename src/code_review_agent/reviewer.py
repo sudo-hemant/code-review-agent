@@ -1,28 +1,35 @@
-"""Step two of the review: ask Claude what is wrong with the change.
+"""Step two of the review: ask the model what is wrong with the change."""
 
-PLACEHOLDER. This is the one piece of phase one that is not built yet. It
-currently hands back an empty review so the rest of the program can be run and
-checked end to end without an API key. Filling this in is the next job.
-"""
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from .findings import Review, Verdict
+from .llm import get_model
+from .prompt import SYSTEM, USER, build_files_section
 
 
 def review_changes(diff: str, files: dict[str, str]) -> Review:
     """Look at a change and say what is wrong with it.
 
-    What this will do once it is built:
-      1. Build the instructions describing what a good reviewer looks for.
-      2. Send those instructions, the change, and the full files to Claude.
-      3. Require the answer to come back shaped like a Review, so every finding
-         arrives with a file, a line, a category, a severity and a confidence.
-      4. Hand that Review back.
+    The model is required to answer in the shape of a Review, so every finding
+    comes back with a file, a line, a category, a seriousness level and a
+    confidence. It cannot reply with loose prose even if it wants to.
     """
-    return Review(
-        findings=[],
-        verdict=Verdict.COMMENT,
-        summary=(
-            f"The reviewer is not built yet. It was handed {len(diff)} characters "
-            f"of changes across {len(files)} file(s) and did nothing with them."
-        ),
+    model = get_model().with_structured_output(Review)
+
+    result = model.invoke(
+        [
+            SystemMessage(SYSTEM),
+            HumanMessage(USER.format(diff=diff, files=build_files_section(files))),
+        ]
     )
+
+    # Belt and braces: if the model returns nothing usable, say so plainly
+    # rather than pretending the change was fine.
+    if not isinstance(result, Review):
+        return Review(
+            findings=[],
+            verdict=Verdict.COMMENT,
+            summary="The model did not answer in the expected shape, so there is no review.",
+        )
+
+    return result
