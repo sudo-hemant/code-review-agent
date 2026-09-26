@@ -24,10 +24,21 @@ console = Console()
 @app.command()
 def main(
     cases_dir: Path = typer.Argument(Path("cases"), help="Folder holding the test cases."),
+    limit: int = typer.Option(
+        0, "--limit", "-n", help="Only run this many cases. Useful on a small free quota."
+    ),
+    only: str = typer.Option(
+        "", "--only", help="Only run cases whose name contains this text."
+    ),
 ) -> None:
     load_dotenv()
 
     cases = load_cases(cases_dir.resolve())
+    if only:
+        cases = [case for case in cases if only in case.name]
+    if limit:
+        cases = cases[:limit]
+
     if not cases:
         console.print(f"No cases found in {cases_dir}.", style="red")
         raise typer.Exit(code=1)
