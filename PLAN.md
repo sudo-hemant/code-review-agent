@@ -1,99 +1,74 @@
-# LangGraph Code Review Agent — Phased Build Plan
+# Code review agent: the plan
 
-## Environment note
-System Python is 3.9.6. LangGraph 1.1+ dropped 3.9. Use Python 3.11+:
-  brew install python@3.11 && python3.11 -m venv .venv && source .venv/bin/activate
-  pip install langgraph langchain-anthropic pydantic python-dotenv typer
+A program that reads the code you have changed and tells you what is wrong with it.
+Built in phases, where every phase ends with something that actually runs.
 
----
+## The decisions this is built on
 
-## Core architecture (target shape)
+- **One reviewer to begin with, not several.** Splitting it up comes later, once
+  there are numbers showing it is needed.
+- **It sees the change plus the full contents of every file the change touched.**
+  A handful of changed lines almost never make sense on their own.
+- **Findings come back in a fixed shape, never as free writing.** Each one carries a
+  file, a line, a category, a seriousness level, a confidence level, an explanation
+  and a suggested fix. This is what makes everything later possible.
+- **Finding nothing is a correct answer.** The reviewer is told this explicitly,
+  because otherwise it invents problems to seem useful.
+- **It judges on general programming knowledge for now**, with a slot ready for the
+  project's own written rules later.
+- **It runs as a terminal command**, and only a terminal command, until phase six.
+- **Python only** at first.
 
-    ingest_diff -> chunk_by_file -> orchestrator(route)
-                                        |
-                        +---------------+---------------+--------+
-                        v               v               v        v
-                      bugs           security        quality    tests   (parallel fan-out)
-                        +---------------+---------------+--------+
-                                        v
-                                  verifier (grounding / false-positive filter)
-                                        v
-                                    summarizer -> report / post to PR
+## Phase one: a reviewer that works, start to finish  (a day)
 
-State (single TypedDict threaded through every node):
-    diff: str
-    files: list[FileChunk]
-    route: list[str]                 # which specialists to run
-    findings: Annotated[list[Finding], operator.add]   # reducer = parallel-safe append
-    verified: list[Finding]
-    report: str
-    verdict: Literal["APPROVE","COMMENT","REQUEST_CHANGES"]
+A command you type inside any project that prints a review of what you changed.
+Four pieces, in this order:
 
-Finding schema (pydantic, structured output — not free text):
-    file, line, severity(critical|major|minor|nit), category, title,
-    rationale, suggested_fix, confidence
+1. Get hold of the changes, by running git from inside the program.
+2. Read the full contents of every file that changed.
+3. Send the change, the files and the instructions to Claude, and require the
+   answer back in the fixed shape.
+4. Print it so a person wants to read it, serious things first, verdict at the end.
 
----
+Status: pieces 1, 2 and 4 are built. Piece 3 is a placeholder in `reviewer.py`.
 
-## Phase 1 — Day 1 MVP (4–6h): single-agent CLI reviewer
-Goal: `review .` prints a structured review of `git diff`.
-- `git diff` / `git diff main...HEAD` ingestion
-- chunker: split on `diff --git`, cap total chars, keep hunk headers + line numbers
-- linear graph: ingest -> review -> format  (3 nodes, no fan-out yet)
-- LLM node with `with_structured_output(ReviewOutput)` -> list[Finding]
-- markdown report grouped by severity + verdict
-Deliverable: working CLI, README with a demo diff. CV-worthy already.
+## Phase two: a way to tell whether it is any good  (half a day)
 
-## Phase 2 (2–3h): multi-agent fan-out
-- Split the one reviewer into 4 specialists (bugs / security / quality / tests)
-- `Send` API or conditional edges for parallel fan-out; `operator.add` reducer on findings
-- Orchestrator node picks specialists by file type (CSS-only diff -> skip security)
-- Summarizer node dedupes + resolves severity conflicts (escalate to higher)
-Talking point: fan-out/fan-in, map-reduce over chunks, cost control via routing.
+Fifteen to twenty small example changes where you already know what is wrong with
+each one, including a few that are completely fine. A command that runs the reviewer
+over all of them and reports two numbers: how many real problems it caught, and how
+many things it reported that were not real.
 
-## Phase 3 (2–3h): quality — the part that actually matters
-- Verifier node: re-checks each finding against the real file content; drops anything
-  unfalsifiable. (58% of agentic review comments are rejected as false positives —
-  this node is the differentiator.)
-- Confidence threshold + "no comment is a valid answer" path
-- Repo conventions file (`REVIEW.md` / CLAUDE.md) injected into prompts
-- Deterministic pre-pass: ruff / bandit / mypy output fed in as evidence, so the LLM
-  reasons instead of re-detecting lint
+This comes second, not last, because from here on every change is a guess without it.
 
-## Phase 4 (3–4h): context retrieval
-- Tool node: read_file, grep, find_definition (tree-sitter or ctags)
-- ReAct sub-loop so an agent can pull the surrounding function/callers before judging
-- Optional: embed repo -> retrieve top-k related chunks. Selective > dumping everything
-  (context dilution hurts accuracy)
+## Phase three: teaching it your standards  (2-3 hours)
 
-## Phase 5 (3–4h): GitHub integration
-- `gh` CLI or PyGithub: fetch PR diff, post inline review comments at file:line
-- FastAPI webhook endpoint on `pull_request` events + GitHub App auth
-- Or simpler: GitHub Action that runs the CLI on PRs and comments
+A rules file the reviewer reads if the project has one, so it judges against real
+team standards instead of generic ones. Plus running the ordinary Python checking
+tools first and handing their results over as evidence, so the model spends its
+attention on logic rather than re-finding things a plain tool finds more reliably.
 
-## Phase 6 (2–3h): production polish
-- Checkpointer (SqliteSaver) -> resumable runs, time-travel debugging
-- `interrupt()` human-in-the-loop before posting REQUEST_CHANGES
-- Streaming progress, token/cost tracking, LangSmith tracing
-- Eval harness: 15–20 diffs with known bugs -> precision/recall per phase.
-  A before/after precision number is the single strongest CV line.
+## Phases four and five: whichever the scoreboard says  (2-3 hours each)
 
-## Phase 7 (optional stretch)
-- Auto-fix patch generation + `git apply` validation / run tests on the patch
-- Learning loop: store which findings humans accepted, feed back as few-shot examples
-- Multi-language via tree-sitter grammars
-- Web UI (Streamlit) showing the graph executing live
+- **Missing real problems?** Split the one reviewer into four narrower ones running
+  at the same time, then merge and de-duplicate their findings.
+- **Inventing problems that are not real?** Add a checking step that looks at each
+  finding on its own and throws away anything the evidence does not support.
 
----
+Let the numbers from phase two choose the order.
 
-## Features menu (pick per phase)
-Reviewer dimensions: logic bugs, security (injection/secrets/authz), performance
-(N+1, unbounded loops), style/conventions, test coverage gaps, docs/API-contract
-breaks, dependency & license checks, migration/DB-safety.
-Behaviours: severity tiering, dedupe, inline vs summary comments, diff-size guards,
-skip-list globs, cost budget per PR, incremental review of new commits only.
+## Phase six: running on GitHub  (3-4 hours)
 
-## CV framing
-"Built a multi-agent code review system (LangGraph, Claude) using fan-out/fan-in
-orchestration over per-file diff chunks with a grounding-verification stage that cut
-false positives from X% to Y%, deployed as a GitHub App with human-in-the-loop gating."
+Runs by itself when someone proposes a change, and posts what it found. One whole
+comment first; comments attached to exact lines once that works.
+
+## Phase seven: the plug for other assistants  (an afternoon)
+
+Wrap it so Claude Code, Cursor and others can call it directly. Not a rebuild, just
+describing what the existing program can do in a standard form.
+
+## Phase eight: optional
+
+Letting it look up extra context on demand, proposing fixes as patches and checking
+they apply, learning from which findings people accepted, other languages, a web page.
+Pick by interest. The project is complete without any of it.
